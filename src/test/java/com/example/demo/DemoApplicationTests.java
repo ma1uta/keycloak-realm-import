@@ -24,6 +24,8 @@ import java.util.List;
 @Testcontainers
 class DemoApplicationTests {
 
+    public static final String REALM_NAME = "demo";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(DemoApplicationTests.class);
 
     public GenericContainer<?> container = new GenericContainer<>("quay.io/keycloak/keycloak:26.2")
@@ -51,7 +53,7 @@ class DemoApplicationTests {
     }
 
     @Test
-    void contextLoads() {
+    void getAndUpdateUserProfile() {
         Keycloak keycloak = KeycloakBuilder.builder()
             .serverUrl("http://localhost:" + container.getMappedPort(8080))
             .username("admin")
@@ -60,13 +62,16 @@ class DemoApplicationTests {
             .clientId("admin-cli")
             .build();
 
+        // Create a new realm
         RealmRepresentation newRealm = new RealmRepresentation();
-        newRealm.setRealm("demo");
+        newRealm.setRealm(REALM_NAME);
         keycloak.realms().create(newRealm);
 
+        // Print current profile
         LOGGER.info("CREATED REALM PROFILE");
-        printProfile(keycloak);
+        printProfile(keycloak, REALM_NAME);
 
+        // Update profile
         UPConfig upConfig = new UPConfig();
         upConfig.setAttributes(
             List.of(
@@ -77,14 +82,15 @@ class DemoApplicationTests {
         );
 
         LOGGER.info("UPDATE USER PROFILE");
-        keycloak.realm("demo").users().userProfile().update(upConfig);
+        keycloak.realm(REALM_NAME).users().userProfile().update(upConfig);
 
+        // Print updated profile
         LOGGER.info("CHECK USER PROFILE");
-        printProfile(keycloak);
+        printProfile(keycloak, REALM_NAME);
     }
 
-    private void printProfile(Keycloak keycloak) {
-        UserProfileResource userProfileResource = keycloak.realm("demo").users().userProfile();
+    private void printProfile(Keycloak keycloak, String realmName) {
+        UserProfileResource userProfileResource = keycloak.realm(realmName).users().userProfile();
         for (UPAttribute attribute : userProfileResource.getConfiguration().getAttributes()) {
             LOGGER.info("attribute: {}", attribute.getName());
         }
